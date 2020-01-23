@@ -6,6 +6,7 @@ public final class Chip8 {
     public static short MEM_OFFSET = 0x200;
     public static int STACK_LIMIT = 16;
     public static int GMEM_LIMIT = 64*32;
+    public static int KEYBOARD_KEYS = 16;
 
     public static short xMask(short opcode) {
         return (short) ((opcode & 0x0F00) >> 8);
@@ -23,6 +24,7 @@ public final class Chip8 {
     private byte[] gmemory;
     private byte[] registers;
     private short[] stack;
+    private boolean[] keyboardState;
     private short stackPointer;
     private short indexRegister;
     private short programCounter;
@@ -36,6 +38,7 @@ public final class Chip8 {
         gmemory = new byte[GMEM_LIMIT];
         registers = new byte[REGISTERS];
         stack = new short[STACK_LIMIT];
+        keyboardState = new boolean[KEYBOARD_KEYS];
     }
 
     private void nextInst() {
@@ -156,8 +159,8 @@ public final class Chip8 {
                  */
                 break;
         }
-
-        /* TODO
+        // TODO test
+        /*
             8xy0 - LD Vx, Vy
             8xy1 - OR Vx, Vy
             8xy2 - AND Vx, Vy
@@ -167,31 +170,60 @@ public final class Chip8 {
             8xy6 - SHR Vx {, Vy}
             8xy7 - SUBN Vx, Vy
             8xyE - SHL Vx {, Vy}
-            9xy0 - SNE Vx, Vy
           */
         switch (opcode & 0xF00F) {
-            case 0x8001: //Sets VX to VX or VY. (Bitwise OR operation)
+            case 0x8001: //8xy1 Sets VX to VX or VY. (Bitwise OR operation)
+                registers[xMask(opcode)] |= registers[yMask(opcode)];
                 break;
 
             case 0x8002: //Sets VX to VX and VY. (Bitwise AND operation)
+                registers[xMask(opcode)] &= registers[yMask(opcode)];
                 break;
 
             case 0x8003: // Sets VX to VX xor VY.
+                registers[xMask(opcode)] ^= registers[yMask(opcode)];
                 break;
 
             case 0x8004: //Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there isn't.
+                // TODO: challenge: do without conditional
+                short s = (short) (registers[xMask(opcode)] + registers[yMask(opcode)]);
+                if ((s&0xFF00)!= 0) registers[0xF] = 1;
+                else registers[0xF] = 0;
+                registers[xMask(opcode)] = (byte) (s & 0x00FF);
                 break;
 
             case 0x8005: //VY is subtracted from VX. VF is set to 0 when there's a borrow, and 1 when there isn't.
+                // TODO: challenge: do without conditional
+                if (registers[xMask(opcode)] > registers[yMask(opcode)]) registers[0xF] = 1;
+                else registers[0xF] = 0;
+                registers[xMask(opcode)] -= registers[yMask(opcode)];
                 break;
 
-            case 0x8006: //Stores the least significant bit of VX in VF and then shifts VX to the right by 1
+            case 0x8006: //8xy6
+                // If the least-significant bit of Vx is 1, then VF is set to 1, otherwise 0. Then Vx is divided by 2.
+                registers[0xF] = (byte) (opcode & 0x0001);
+                registers[xMask(opcode)] >>= 1;
                 break;
-
-            case 0x8007: //Sets VX to VY minus VX. VF is set to 0 when there's a borrow, and 1 when there isn't.
+            /*
+                8xy7 - SUBN Vx, Vy
+                Set Vx = Vy - Vx, set VF = NOT borrow.
+                If Vy > Vx, then VF is set to 1, otherwise 0. Then Vx is subtracted from Vy, and the results stored in Vx.
+             */
+            case 0x8007:
+                // TODO: challenge: do without conditional
+                if (registers[yMask(opcode)] > registers[xMask(opcode)]) registers[0xF] = 1;
+                else registers[0xF] = 0;
+                registers[xMask(opcode)] = (byte) (registers[yMask(opcode)] - registers[xMask(opcode)]);
                 break;
-
-            case 0x800E: //Stores the most significant bit of VX in VF and then shifts VX to the left by 1.
+            /*
+            8xyE - SHL Vx {, Vy}
+            Set Vx = Vx SHL 1.
+            If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0. Then Vx is multiplied by 2. */
+            case 0x800E:
+                // TODO: challenge: do without conditional
+                if((registers[xMask(opcode)] & 0x8000) != 0) registers[0xF] = 1;
+                else registers[0xF] = 0;
+                registers[xMask(opcode)] <<= 1;
                 break;
         }
 
