@@ -227,7 +227,8 @@ public final class Chip8 {
                 break;
         }
 
-        /* TODO
+        // TODO test
+        /*
             Ex9E - SKP Vx
             ExA1 - SKNP Vx
             Fx07 - LD Vx, DT
@@ -242,36 +243,72 @@ public final class Chip8 {
         */
         switch (opcode & 0xF0FF) {
             case 0xE09E:
+                /*
+                    Skip next instruction if key with the value of Vx is pressed.
+                    Checks the keyboard, and if the key corresponding to the value of Vx is currently in
+                     the down position, PC is increased by 2.
+                 */
+                if (keyboardState[registers[xMask(opcode)]]) nextInst();
                 break;
 
             case 0xE0A1:
+                if (!keyboardState[registers[xMask(opcode)]]) nextInst();
                 break;
 
             case 0xF007:
+                /*  Set Vx = delay timer value.
+                    The value of DT is placed into Vx. */
+                registers[opcode] = delay_timer;
                 break;
 
             case 0xF00A:
+                /*  Wait for a key press, store the value of the key in Vx.
+                    All execution stops until a key is pressed, then the value of that key is stored in Vx. */
+                int count = 0;
+                while (!keyboardState[count]) {
+                    count++;
+                    if (count == KEYBOARD_KEYS) count = 0;
+                }
+                registers[xMask(opcode)] = (byte) count;
                 break;
 
             case 0xF015:
+                delay_timer = registers[xMask(opcode)];
                 break;
 
             case 0xF018:
+                sound_timer = registers[xMask(opcode)];
                 break;
 
             case 0xF01E:
+                indexRegister += registers[xMask(opcode)];
                 break;
 
             case 0xF029:
+                // TODO: Set I = location of sprite for digit Vx.
                 break;
 
             case 0xF033:
+                /* TODO
+                    Store BCD representation of Vx in memory locations I, I+1, and I+2.
+                    The interpreter takes the decimal value of Vx, and places the hundreds digit in memory at location in I,
+                     the tens digit at location I+1, and the ones digit at location I+2.
+                 */
                 break;
 
             case 0xF055:
+                /*
+                    Store registers V0 through Vx in memory starting at location I.
+                    The interpreter copies the values of registers V0 through Vx into memory,
+                     starting at the address in I.
+                 */
+                for(int i = 0; i < xMask(opcode); ++i) memory[indexRegister + i] = registers[i];
                 break;
 
             case 0xF065:
+                /*Read registers V0 through Vx from memory starting at location I.
+                    The interpreter reads values from memory starting at location I into registers V0 through Vx. */
+                for(int i = 0; i < xMask(opcode); ++i) registers[i] = memory[indexRegister + i] ;
                 break;
 
         }
