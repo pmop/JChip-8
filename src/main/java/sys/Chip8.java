@@ -33,22 +33,19 @@ public final class Chip8 {
     private byte delay_timer;
     private byte sound_timer;
 
+    Prng prng;
+
     private void init() {
         memory = new byte[MEM_LIMIT];
         gmemory = new byte[GMEM_LIMIT];
         registers = new byte[REGISTERS];
         stack = new short[STACK_LIMIT];
         keyboardState = new boolean[KEYBOARD_KEYS];
+        prng = new JavaPrng();
     }
 
     private void nextInst() {
         programCounter +=2;
-    }
-
-    //TODO: PRNG
-    private byte prng() {
-        byte b = 0;
-        return b;
     }
 
     private short fetch() {
@@ -144,7 +141,7 @@ public final class Chip8 {
                 programCounter = (short) ((opcode & 0x0FFF) + registers[0]);
                 break;
             case 0xC000: //Cxkk Set Vx = random byte AND kk
-                registers[xMask(opcode)] = (byte) (prng() & ((byte) (opcode & 0x00FF)));
+                registers[xMask(opcode)] = (byte) (prng.generate() & ((byte) (opcode & 0x00FF)));
                 break;
             case 0xD000: //Dxyn
                 /* TODO
